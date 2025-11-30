@@ -1,31 +1,32 @@
 class User {
   final String id;
-  final String username;
-  final String status; // 'online', 'offline', 'busy'
-  final String? avatarUrl;
+  final String name;
+  final String? sipPeer;
 
   User({
     required this.id,
-    required this.username,
-    this.status = 'offline',
-    this.avatarUrl,
+    required this.name,
+    this.sipPeer,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
-      username: json['username'] as String,
-      status: json['status'] as String? ?? 'offline',
-      avatarUrl: json['avatarUrl'] as String?,
+      name: json['name'] as String,
+      sipPeer: json['sipPeer'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'username': username,
-      'status': status,
-      'avatarUrl': avatarUrl,
+      'name': name,
+      'sipPeer': sipPeer,
     };
   }
+  
+  // Helper for UI compatibility
+  String get username => name;
+  String get status => sipPeer != null ? 'online' : 'offline';
+  String? get avatarUrl => null; // API doesn't provide avatar
 }

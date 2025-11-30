@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/users_controller.dart';
+import '../../controllers/calls_controller.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/user_list_item.dart';
 
@@ -66,15 +67,32 @@ class UsersScreen extends ConsumerWidget {
                   separatorBuilder: (context, index) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final user = users[index];
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      child: UserListItem(
-                        user: user,
-                        onTap: () {
-                          // Start a call for demo purposes, or go to chat
-                          context.push('/call/demo_call_${user.id}');
-                        },
-                      ),
+                    return UserListItem(
+                      user: user,
+                      onTap: () async {
+                        final currentUser = ref.read(currentUserProvider);
+                        if (currentUser == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Error: No user logged in')),
+                          );
+                          return;
+                        }
+                        
+                        // Start call
+                        try {
+                          await ref.read(callsProvider.notifier).startCall(currentUser.id, user.id);
+                          final call = ref.read(callsProvider);
+                          if (call != null && context.mounted) {
+                            context.push('/call/${call.id}');
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to start call: $e')),
+                            );
+                          }
+                        }
+                      },
                     );
                   },
                 );

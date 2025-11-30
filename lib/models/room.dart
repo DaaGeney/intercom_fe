@@ -1,22 +1,23 @@
-import 'user.dart';
-
 class Room {
   final String id;
   final String name;
-  final List<User> users;
+  final String conferenceId;
+  final List<String> participants; // List of User IDs
 
   Room({
     required this.id,
     required this.name,
-    this.users = const [],
+    required this.conferenceId,
+    this.participants = const [],
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
       id: json['id'] as String,
       name: json['name'] as String,
-      users: (json['users'] as List<dynamic>?)
-              ?.map((e) => User.fromJson(e as Map<String, dynamic>))
+      conferenceId: json['conferenceId'] as String,
+      participants: (json['participants'] as List<dynamic>?)
+              ?.map((e) => e as String)
               .toList() ??
           [],
     );
@@ -26,7 +27,8 @@ class Room {
     return {
       'id': id,
       'name': name,
-      'users': users.map((e) => e.toJson()).toList(),
+      'conferenceId': conferenceId,
+      'participants': participants,
     };
   }
 }

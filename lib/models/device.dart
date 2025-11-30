@@ -1,31 +1,40 @@
 class Device {
-  final String id;
-  final String name;
-  final String type;
+  final String peer;
+  final String status; // 'ONLINE', 'OFFLINE'
+  final String? address;
   final String? userId;
+  final String lastUpdated;
 
   Device({
-    required this.id,
-    required this.name,
-    required this.type,
+    required this.peer,
+    required this.status,
+    this.address,
     this.userId,
+    required this.lastUpdated,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
     return Device(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      type: json['type'] as String,
+      peer: json['peer'] as String,
+      status: json['status'] as String,
+      address: json['address'] as String?,
       userId: json['userId'] as String?,
+      lastUpdated: json['lastUpdated'] as String,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'name': name,
-      'type': type,
+      'peer': peer,
+      'status': status,
+      'address': address,
       'userId': userId,
+      'lastUpdated': lastUpdated,
     };
   }
+  
+  // Helper for UI compatibility
+  String get id => peer;
+  String get name => peer;
+  String get type => 'SIP Device';
 }

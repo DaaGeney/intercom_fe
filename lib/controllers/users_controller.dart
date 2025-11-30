@@ -2,30 +2,34 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/websocket_service.dart';
+import '../config.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) {
-  // Replace with actual server IP
-  return ApiService(baseUrl: 'http://localhost:3000/api');
+  return ApiService(baseUrl: Config.apiBaseUrl);
 });
 
 final webSocketServiceProvider = Provider<WebSocketService>((ref) {
-  // Replace with actual server IP
-  return WebSocketService(url: 'ws://localhost:3000/ws');
+  return WebSocketService(url: Config.wsUrl);
 });
+
+final currentUserProvider = StateProvider<User?>((ref) => null);
 
 final usersProvider = StateNotifierProvider<UsersController, AsyncValue<List<User>>>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   final wsService = ref.watch(webSocketServiceProvider);
-  return UsersController(apiService, wsService);
+  final currentUserController = ref.watch(currentUserProvider.notifier);
+  return UsersController(apiService, wsService, currentUserController);
 });
 
 class UsersController extends StateNotifier<AsyncValue<List<User>>> {
   final ApiService _apiService;
   final WebSocketService _wsService;
+  final StateController<User?> _currentUserController;
 
-  UsersController(this._apiService, this._wsService) : super(const AsyncValue.loading()) {
+  UsersController(this._apiService, this._wsService, this._currentUserController) : super(const AsyncValue.loading()) {
     _fetchUsers();
     _listenToEvents();
+    _wsService.connect();
   }
 
   Future<void> _fetchUsers() async {
@@ -40,19 +44,19 @@ class UsersController extends StateNotifier<AsyncValue<List<User>>> {
   void _listenToEvents() {
     _wsService.events.listen((event) {
       if (event['type'] == 'user.registered') {
-        _fetchUsers(); // Refresh list on new user
+        _fetchUsers();
       }
-      // Handle other user-related events if needed
     });
   }
 
-  Future<void> createUser(String username) async {
+  Future<void> createUser(String name) async {
     try {
-      await _apiService.createUser(username);
+      final user = await _apiService.createUser(name);
+      _currentUserController.state = user; // Set current user
       _fetchUsers();
     } catch (e) {
-      // Handle error
       print('Error creating user: $e');
+      rethrow;
     }
   }
 }

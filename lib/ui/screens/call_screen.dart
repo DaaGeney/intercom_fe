@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/calls_controller.dart';
+import '../../controllers/users_controller.dart';
 import '../../theme/app_theme.dart';
+import '../../models/user.dart';
 
 class CallScreen extends ConsumerWidget {
   final String callId;
@@ -12,10 +14,31 @@ class CallScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final call = ref.watch(callsProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final usersAsync = ref.watch(usersProvider);
 
-    // For demo purposes, if call is null, we show a "Connecting..." state or similar
-    // instead of immediately exiting, to match the UI design request.
-    
+    // If call is null (ended) or we don't have a current user, handle gracefully
+    if (call == null) {
+      // Ideally navigate back, but for now show a "Call Ended" state
+      return const Scaffold(
+        backgroundColor: AppTheme.callBackground,
+        body: Center(child: Text('Call Ended', style: TextStyle(color: Colors.white))),
+      );
+    }
+
+    // Determine the other user
+    User? otherUser;
+    if (currentUser != null && usersAsync.hasValue) {
+      final otherUserId = call.fromUserId == currentUser.id ? call.toUserId : call.fromUserId;
+      otherUser = usersAsync.value!.cast<User?>().firstWhere(
+            (u) => u!.id == otherUserId,
+            orElse: () => null,
+          );
+    }
+
+    final displayName = otherUser?.name ?? 'Unknown';
+    final statusText = call.status == 'active' ? 'Connected' : 'Calling...';
+
     return Scaffold(
       backgroundColor: AppTheme.callBackground,
       appBar: AppBar(
@@ -26,12 +49,6 @@ class CallScreen extends ConsumerWidget {
           label: const Text('Chats', style: TextStyle(color: AppTheme.primaryBlue, fontSize: 16)),
         ),
         leadingWidth: 100,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add_outlined, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -43,45 +60,34 @@ class CallScreen extends ConsumerWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white.withOpacity(0.1), width: 2),
             ),
-            child: const CircleAvatar(
+            child: CircleAvatar(
               radius: 80,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=32'), // Placeholder
+              backgroundColor: AppTheme.primaryBlue,
+              child: Text(
+                displayName.isNotEmpty ? displayName[0].toUpperCase() : '?',
+                style: const TextStyle(fontSize: 64, color: Colors.white),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Sofia Rodriguez',
-            style: TextStyle(
+          Text(
+            displayName,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Conectando...',
-            style: TextStyle(
+          Text(
+            statusText,
+            style: const TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 16,
             ),
           ),
           const Spacer(flex: 2),
-          // Participants Row
-          SizedBox(
-            height: 120,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              children: [
-                _buildParticipant('Carlos Perez', 'https://i.pravatar.cc/150?img=11', isMuted: true),
-                const SizedBox(width: 24),
-                _buildParticipant('Ana Diaz', null, isMuted: true, initials: 'AD'),
-                const SizedBox(width: 24),
-                _buildParticipant('Miguel Silva', 'https://i.pravatar.cc/150?img=59', isSpeaking: true),
-              ],
-            ),
-          ),
-          const Spacer(),
+          
           // Controls
           Container(
             padding: const EdgeInsets.only(bottom: 48, top: 24),
@@ -101,45 +107,6 @@ class CallScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildParticipant(String name, String? imgUrl, {bool isMuted = false, bool isSpeaking = false, String? initials}) {
-    return Column(
-      children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: AppTheme.callControlBackground,
-              backgroundImage: imgUrl != null ? NetworkImage(imgUrl) : null,
-              child: imgUrl == null ? Text(initials ?? '', style: const TextStyle(color: Colors.white, fontSize: 20)) : null,
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: isMuted ? AppTheme.danger : (isSpeaking ? AppTheme.success : AppTheme.callControlBackground),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.callBackground, width: 2),
-                ),
-                child: Icon(
-                  isMuted ? Icons.mic_off : (isSpeaking ? Icons.mic : Icons.mic_none),
-                  size: 12,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          name,
-          style: const TextStyle(color: Colors.white, fontSize: 12),
-        ),
-      ],
     );
   }
 

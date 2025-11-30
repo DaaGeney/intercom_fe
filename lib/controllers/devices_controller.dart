@@ -36,9 +36,9 @@ class DevicesController extends StateNotifier<AsyncValue<List<Device>>> {
     });
   }
 
-  Future<void> attachDevice(String userId, String deviceId) async {
+  Future<void> attachDevice(String userId, String sipPeer) async {
     try {
-      await _apiService.attachDevice(userId, deviceId);
+      await _apiService.attachDevice(userId, sipPeer);
       _fetchDevices();
     } catch (e) {
       print('Error attaching device: $e');

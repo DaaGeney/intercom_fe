@@ -21,19 +21,24 @@ class CallsController extends StateNotifier<Call?> {
   void _listenToEvents() {
     _wsService.events.listen((event) {
       if (event['type'] == 'call.started') {
-        // Assuming event data contains call info
-        // state = Call.fromJson(event['data']);
-        // For now, we might need to fetch or just update state if data is provided
-        print('Call started event received');
+        // Parse call data from event
+        try {
+          final callData = event['data'];
+          if (callData != null) {
+            state = Call.fromJson(callData);
+          }
+        } catch (e) {
+          print('Error parsing call.started event: $e');
+        }
       } else if (event['type'] == 'call.ended') {
         state = null;
       }
     });
   }
 
-  Future<void> startCall(String callerId, String receiverId) async {
+  Future<void> startCall(String fromUserId, String toUserId) async {
     try {
-      final call = await _apiService.startCall(callerId, receiverId);
+      final call = await _apiService.startCall(fromUserId, toUserId);
       state = call;
     } catch (e) {
       print('Error starting call: $e');

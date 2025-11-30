@@ -10,11 +10,11 @@ class ApiService {
 
   ApiService({required this.baseUrl});
 
-  Future<User> createUser(String username) async {
+  Future<User> createUser(String name) async {
     final response = await http.post(
       Uri.parse('$baseUrl/users'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username}),
+      body: jsonEncode({'name': name}),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
@@ -35,11 +35,11 @@ class ApiService {
     }
   }
 
-  Future<void> attachDevice(String userId, String deviceId) async {
+  Future<void> attachDevice(String userId, String sipPeer) async {
     final response = await http.post(
       Uri.parse('$baseUrl/users/$userId/attach-device'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'deviceId': deviceId}),
+      body: jsonEncode({'sipPeer': sipPeer}),
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
@@ -58,11 +58,11 @@ class ApiService {
     }
   }
 
-  Future<Call> startCall(String callerId, String receiverId) async {
+  Future<Call> startCall(String fromUserId, String toUserId) async {
     final response = await http.post(
       Uri.parse('$baseUrl/calls'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'callerId': callerId, 'receiverId': receiverId}),
+      body: jsonEncode({'fromUserId': fromUserId, 'toUserId': toUserId}),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
