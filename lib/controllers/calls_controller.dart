@@ -39,7 +39,16 @@ class CallsController extends StateNotifier<Call?> {
   Future<void> startCall(String fromUserId, String toUserId) async {
     try {
       final call = await _apiService.startCall(fromUserId, toUserId);
-      state = call;
+      // Backend doesn't return fromUserId/toUserId, so we need to add them manually
+      state = Call(
+        id: call.id,
+        fromUserId: fromUserId,
+        toUserId: toUserId,
+        status: call.status,
+        channel: call.channel,
+        uniqueId: call.uniqueId,
+        startTime: call.startTime,
+      );
     } catch (e) {
       print('Error starting call: $e');
     }

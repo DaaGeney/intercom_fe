@@ -19,9 +19,9 @@ class Call {
 
   factory Call.fromJson(Map<String, dynamic> json) {
     return Call(
-      id: json['id'] as String,
-      fromUserId: json['fromUserId'] as String,
-      toUserId: json['toUserId'] as String,
+      id: json['callId'] as String? ?? json['id'] as String,
+      fromUserId: json['fromUserId'] as String? ?? '',
+      toUserId: json['toUserId'] as String? ?? '',
       status: json['status'] as String,
       channel: json['channel'] as String?,
       uniqueId: json['uniqueId'] as String?,
