@@ -118,15 +118,79 @@ class ApiService {
     }
   }
 
-  Future<void> joinRoom(String roomId, String userId) async {
+  Future<Map<String, dynamic>> joinRoom(String roomId, String userId) async {
     final response = await http.post(
       Uri.parse('$baseUrl/rooms/$roomId/join'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'userId': userId}),
     );
 
-    if (response.statusCode != 200) {
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } else {
       throw Exception('Failed to join room');
+    }
+  }
+
+  // New method to get LiveKit token
+  Future<Map<String, dynamic>> getLiveKitToken({
+    required String roomName,
+    required String identity,
+    required String name,
+  }) async {
+    final url = Uri.parse('$baseUrl/livekit/token');
+    final body = jsonEncode({
+      'roomName': roomName,
+      'identity': identity,
+      'name': name,
+    });
+
+    print('🔵 [ApiService] getLiveKitToken - Request:');
+    print('   URL: $url');
+    print('   Body: $body');
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      print('🟢 [ApiService] getLiveKitToken - Response:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Headers: ${response.headers}');
+      print('   Body: ${response.body}');
+
+      // Aceptar tanto 200 como 201 (201 Created es válido)
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final decodedBody = jsonDecode(response.body) as Map<String, dynamic>;
+          print('✅ [ApiService] getLiveKitToken - Parsed:');
+          print('   Token: ${decodedBody['token']?.toString().substring(0, 20)}...');
+          print('   URL: ${decodedBody['url'] ?? "NO VIENE EN LA RESPUESTA"}');
+          
+          // Si no viene 'url', loguear advertencia pero continuar
+          if (decodedBody['url'] == null) {
+            print('⚠️ [ApiService] getLiveKitToken - URL no viene en la respuesta');
+            print('   El backend solo retornó: ${decodedBody.keys.toList()}');
+          }
+          
+          return decodedBody;
+        } catch (e) {
+          print('❌ [ApiService] getLiveKitToken - JSON Parse Error: $e');
+          print('   Raw Body: ${response.body}');
+          rethrow;
+        }
+      } else {
+        print('❌ [ApiService] getLiveKitToken - Error Status: ${response.statusCode}');
+        print('   Error Body: ${response.body}');
+        throw Exception('Failed to get LiveKit token: Status ${response.statusCode}, Body: ${response.body}');
+      }
+    } catch (e, stackTrace) {
+      print('❌ [ApiService] getLiveKitToken - Exception:');
+      print('   Error: $e');
+      print('   StackTrace: $stackTrace');
+      rethrow;
     }
   }
 }

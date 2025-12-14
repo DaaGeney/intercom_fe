@@ -1,13 +1,13 @@
 class Room {
   final String id;
   final String name;
-  final String conferenceId;
+  final String? roomName;
   final List<String> participants; // List of User IDs
 
   Room({
     required this.id,
     required this.name,
-    required this.conferenceId,
+    this.roomName,
     this.participants = const [],
   });
 
@@ -15,7 +15,7 @@ class Room {
     return Room(
       id: json['id'] as String,
       name: json['name'] as String,
-      conferenceId: json['conferenceId'] as String,
+      roomName: json['roomName'] as String?,
       participants: (json['participants'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
@@ -27,7 +27,7 @@ class Room {
     return {
       'id': id,
       'name': name,
-      'conferenceId': conferenceId,
+      'roomName': roomName,
       'participants': participants,
     };
   }

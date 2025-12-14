@@ -7,6 +7,7 @@ import '../../controllers/rooms_controller.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../../models/room.dart';
+import '../../models/call.dart';
 import '../widgets/user_avatar.dart';
 
 class UsersScreen extends ConsumerWidget {
@@ -17,6 +18,18 @@ class UsersScreen extends ConsumerWidget {
     final usersAsyncValue = ref.watch(usersProvider);
     final roomsAsyncValue = ref.watch(roomsProvider);
     final currentUser = ref.watch(currentUserProvider);
+
+    // Listen for incoming calls and navigate automatically
+    ref.listen<Call?>(callsProvider, (previous, next) {
+      if (next != null && currentUser != null) {
+        // Check if this is an incoming call (user is the recipient)
+        // Only navigate if we weren't already in a call (previous == null)
+        if (previous == null && next.toUserId == currentUser.id && context.mounted) {
+          // Navigate to incoming call screen (different from outgoing)
+          context.push('/incoming-call/${next.id}');
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundDark,

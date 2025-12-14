@@ -45,12 +45,14 @@ class RoomsController extends StateNotifier<AsyncValue<List<Room>>> {
     }
   }
 
-  Future<void> joinRoom(String roomId, String userId) async {
+  Future<Map<String, dynamic>> joinRoom(String roomId, String userId) async {
     try {
-      await _apiService.joinRoom(roomId, userId);
+      final response = await _apiService.joinRoom(roomId, userId);
       _fetchRooms();
+      return response; // Returns { success, token, url, roomName }
     } catch (e) {
       print('Error joining room: $e');
+      rethrow;
     }
   }
 }

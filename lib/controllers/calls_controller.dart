@@ -25,7 +25,12 @@ class CallsController extends StateNotifier<Call?> {
         try {
           final callData = event['data'];
           if (callData != null) {
-            state = Call.fromJson(callData);
+            final call = Call.fromJson(callData);
+            state = call;
+            
+            // Note: The receiving user needs to get their own token
+            // This should be handled in the UI layer (navigate to call screen,
+            // then CallScreen will get token via joinRoom or getLiveKitToken)
           }
         } catch (e) {
           print('Error parsing call.started event: $e');
@@ -39,18 +44,20 @@ class CallsController extends StateNotifier<Call?> {
   Future<void> startCall(String fromUserId, String toUserId) async {
     try {
       final call = await _apiService.startCall(fromUserId, toUserId);
-      // Backend doesn't return fromUserId/toUserId, so we need to add them manually
+      // Backend now returns LiveKit token, url and roomName
       state = Call(
         id: call.id,
         fromUserId: fromUserId,
         toUserId: toUserId,
         status: call.status,
-        channel: call.channel,
-        uniqueId: call.uniqueId,
+        roomName: call.roomName,
+        token: call.token,
+        url: call.url,
         startTime: call.startTime,
       );
     } catch (e) {
       print('Error starting call: $e');
+      rethrow;
     }
   }
 

@@ -8,6 +8,7 @@ import 'ui/screens/users_screen.dart';
 import 'ui/screens/devices_screen.dart';
 import 'ui/screens/room_screen.dart';
 import 'ui/screens/call_screen.dart';
+import 'ui/screens/incoming_call_screen.dart';
 import 'ui/screens/settings_screen.dart';
 
 void main() {
@@ -56,6 +57,13 @@ final _router = GoRouter(
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return CallScreen(callId: id);
+      },
+    ),
+    GoRoute(
+      path: '/incoming-call/:id',
+      builder: (context, state) {
+        final id = state.pathParameters['id']!;
+        return IncomingCallScreen(callId: id);
       },
     ),
   ],

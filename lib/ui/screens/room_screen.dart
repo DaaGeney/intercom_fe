@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/rooms_controller.dart';
 import '../../controllers/users_controller.dart';
+import '../../controllers/livekit_controller.dart';
+import '../../config.dart';
 import '../../theme/app_theme.dart';
 import '../widgets/user_avatar.dart';
 
@@ -17,6 +19,7 @@ class RoomScreen extends ConsumerStatefulWidget {
 
 class _RoomScreenState extends ConsumerState<RoomScreen> {
   bool _isJoined = false;
+  bool _isConnecting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -374,23 +377,78 @@ class _RoomScreenState extends ConsumerState<RoomScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  if (currentUser != null) {
-                                    if (_isJoined) {
-                                      // Leave logic
-                                      setState(() {
-                                        _isJoined = false;
-                                      });
-                                    } else {
-                                      ref.read(roomsProvider.notifier).joinRoom(room.id, currentUser.id);
-                                      setState(() {
-                                        _isJoined = true;
-                                      });
-                                    }
-                                  }
-                                },
-                                icon: Icon(_isJoined ? Icons.exit_to_app : Icons.mic),
-                                label: Text(_isJoined ? 'Salir' : 'Unirse al grupo'),
+                                onPressed: _isConnecting 
+                                    ? null 
+                                    : () async {
+                                        if (currentUser != null) {
+                                          if (_isJoined) {
+                                            // Leave room and disconnect LiveKit
+                                            final liveKitService = ref.read(liveKitServiceProvider);
+                                            await liveKitService.disconnect();
+                                            
+                                            setState(() {
+                                              _isJoined = false;
+                                            });
+                                            ref.read(liveKitConnectionStateProvider.notifier).state = false;
+                                          } else {
+                                            // Join room and connect to LiveKit
+                                            setState(() {
+                                              _isConnecting = true;
+                                            });
+
+                                            try {
+                                              final joinResponse = await ref.read(roomsProvider.notifier).joinRoom(
+                                                room.id,
+                                                currentUser.id,
+                                              );
+
+                                              if (joinResponse['token'] != null) {
+                                                final liveKitService = ref.read(liveKitServiceProvider);
+                                                // El backend no retorna la URL, usar la constante de Config
+                                                final liveKitUrl = joinResponse['url'] as String? ?? Config.liveKitUrl;
+                                                await liveKitService.connect(
+                                                  url: liveKitUrl,
+                                                  token: joinResponse['token'] as String,
+                                                );
+
+                                                if (mounted) {
+                                                  setState(() {
+                                                    _isJoined = true;
+                                                    _isConnecting = false;
+                                                  });
+                                                  ref.read(liveKitConnectionStateProvider.notifier).state = true;
+                                                }
+                                              }
+                                            } catch (e) {
+                                              debugPrint('Error joining room: $e');
+                                              if (mounted) {
+                                                setState(() {
+                                                  _isConnecting = false;
+                                                });
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Error al unirse: $e'),
+                                                    backgroundColor: AppTheme.danger,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                icon: _isConnecting 
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Icon(_isJoined ? Icons.exit_to_app : Icons.mic),
+                                label: Text(_isConnecting 
+                                    ? 'Conectando...' 
+                                    : (_isJoined ? 'Salir' : 'Unirse al grupo')),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _isJoined ? AppTheme.danger : AppTheme.primaryBlue,
                                   padding: const EdgeInsets.symmetric(vertical: 16),

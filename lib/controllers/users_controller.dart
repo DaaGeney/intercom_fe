@@ -5,11 +5,11 @@ import '../services/websocket_service.dart';
 import '../config.dart';
 
 final apiServiceProvider = Provider<ApiService>((ref) {
-  return ApiService(baseUrl: Config.apiBaseUrl);
+  return ApiService(baseUrl: Config.backendUrl);
 });
 
 final webSocketServiceProvider = Provider<WebSocketService>((ref) {
-  return WebSocketService(url: Config.wsUrl);
+  return WebSocketService(url: Config.backendUrl);
 });
 
 final currentUserProvider = StateProvider<User?>((ref) => null);

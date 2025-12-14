@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../controllers/calls_controller.dart';
 import '../../controllers/users_controller.dart';
+import '../../controllers/livekit_controller.dart';
+import '../../services/api_service.dart';
+import '../../config.dart';
 import '../../theme/app_theme.dart';
 import '../../models/user.dart';
 import '../widgets/user_avatar.dart';
@@ -27,6 +30,69 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   void initState() {
     super.initState();
     _startCallTimer();
+    _connectToLiveKit();
+  }
+
+  Future<void> _connectToLiveKit() async {
+    try {
+      final call = ref.read(callsProvider);
+      final currentUser = ref.read(currentUserProvider);
+      
+      if (call == null || currentUser == null) return;
+
+      String? token = call.token;
+      String? url = call.url;
+
+      // If user doesn't have token (incoming call), get it from backend
+      // This happens when user receives call.started event (which doesn't include token)
+      if (token == null || url == null) {
+        try {
+          final apiService = ref.read(apiServiceProvider);
+          final tokenResponse = await apiService.getLiveKitToken(
+            roomName: call.roomName ?? call.id,
+            identity: currentUser.id,
+            name: currentUser.name,
+          );
+          token = tokenResponse['token'] as String;
+          // El backend no retorna la URL, usar la constante de Config
+          url = tokenResponse['url'] as String? ?? call.url ?? Config.liveKitUrl;
+        } catch (e) {
+          debugPrint('Error getting LiveKit token: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error al obtener token: $e'),
+                backgroundColor: AppTheme.danger,
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // At this point, token and url should be available
+      if (token != null && url != null) {
+        final liveKitService = ref.read(liveKitServiceProvider);
+        await liveKitService.connect(
+          url: url,
+          token: token,
+        );
+        
+        if (mounted) {
+          ref.read(liveKitConnectionStateProvider.notifier).state = true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error connecting to LiveKit: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al conectar: $e'),
+            backgroundColor: AppTheme.danger,
+          ),
+        );
+      }
+    }
   }
 
   void _startCallTimer() {
@@ -42,6 +108,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   @override
   void dispose() {
     _callTimer?.cancel();
+    final liveKitService = ref.read(liveKitServiceProvider);
+    liveKitService.disconnect();
+    ref.read(liveKitConnectionStateProvider.notifier).state = false;
     super.dispose();
   }
 
@@ -57,14 +126,20 @@ class _CallScreenState extends ConsumerState<CallScreen> {
     final currentUser = ref.watch(currentUserProvider);
     final usersAsync = ref.watch(usersProvider);
 
+    // Si la llamada terminó, regresar automáticamente
     if (call == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted && context.canPop()) {
+          context.pop();
+        } else if (context.mounted) {
+          // Si no puede hacer pop, navegar a la pantalla principal
+          context.go('/users');
+        }
+      });
       return Scaffold(
         backgroundColor: AppTheme.backgroundDark,
         body: const Center(
-          child: Text(
-            'Call Ended',
-            style: TextStyle(color: AppTheme.textPrimary),
-          ),
+          child: CircularProgressIndicator(),
         ),
       );
     }
@@ -265,11 +340,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         icon: _isMuted ? Icons.mic_off : Icons.mic,
                         label: 'Silenciar',
                         isActive: _isMuted,
-                        onTap: () {
-                          setState(() {
-                            _isMuted = !_isMuted;
-                          });
-                        },
+                        onTap: _toggleMicrophone,
                       ),
                       _buildControlButton(
                         icon: Icons.dialpad,
@@ -281,11 +352,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                         label: 'Altavoz',
                         isActive: _isSpeakerOn,
                         color: _isSpeakerOn ? AppTheme.primaryBlue : AppTheme.cardDark,
-                        onTap: () {
-                          setState(() {
-                            _isSpeakerOn = !_isSpeakerOn;
-                          });
-                        },
+                        onTap: _toggleSpeaker,
                       ),
                       _buildControlButton(
                         icon: Icons.person_add,
@@ -302,9 +369,17 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                     size: 64,
                     iconSize: 32,
                     color: AppTheme.danger,
-                    onTap: () {
-                      ref.read(callsProvider.notifier).endCall(widget.callId);
-                      context.pop();
+                    onTap: () async {
+                      // Disconnect from LiveKit first
+                      final liveKitService = ref.read(liveKitServiceProvider);
+                      await liveKitService.disconnect();
+                      
+                      // End call in backend
+                      await ref.read(callsProvider.notifier).endCall(widget.callId);
+                      
+                      if (mounted) {
+                        context.pop();
+                      }
                     },
                   ),
                 ],
@@ -357,5 +432,31 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         ],
       ],
     );
+  }
+
+  Future<void> _toggleMicrophone() async {
+    try {
+      final liveKitService = ref.read(liveKitServiceProvider);
+      await liveKitService.toggleMicrophone();
+      setState(() {
+        _isMuted = !_isMuted;
+      });
+      ref.read(microphoneStateProvider.notifier).state = !_isMuted;
+    } catch (e) {
+      debugPrint('Error toggling microphone: $e');
+    }
+  }
+
+  Future<void> _toggleSpeaker() async {
+    try {
+      final liveKitService = ref.read(liveKitServiceProvider);
+      await liveKitService.toggleSpeaker();
+      setState(() {
+        _isSpeakerOn = !_isSpeakerOn;
+      });
+      ref.read(speakerStateProvider.notifier).state = _isSpeakerOn;
+    } catch (e) {
+      debugPrint('Error toggling speaker: $e');
+    }
   }
 }
