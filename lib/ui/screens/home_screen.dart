@@ -23,11 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
         context.go('/users');
         break;
       case 1:
-        // context.go('/rooms'); // Assuming rooms list is separate or part of users
-        // For now, let's map it to devices or keep it as placeholder
-        context.go('/devices');
+        // Contacts/Users view
+        context.go('/users');
         break;
       case 2:
+        // Profile/Settings
         context.go('/settings');
         break;
     }
@@ -72,22 +72,25 @@ class _HomeScreenState extends State<HomeScreen> {
           ? BottomNavigationBar(
               items: const <BottomNavigationBarItem>[
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.chat_bubble_outline),
-                  activeIcon: Icon(Icons.chat_bubble),
-                  label: 'Chats',
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home),
+                  label: 'Home',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.devices),
-                  label: 'Devices',
+                  icon: Icon(Icons.people_outline),
+                  activeIcon: Icon(Icons.people),
+                  label: 'Contacts',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.settings_outlined),
-                  activeIcon: Icon(Icons.settings),
-                  label: 'Settings',
+                  icon: Icon(Icons.person_outline),
+                  activeIcon: Icon(Icons.person),
+                  label: 'Profile',
                 ),
               ],
               currentIndex: _selectedIndex,
-              selectedItemColor: AppTheme.primaryBlue,
+              selectedItemColor: AppTheme.primaryPurple,
+              unselectedItemColor: AppTheme.textTertiary,
+              backgroundColor: AppTheme.surfaceDark,
               onTap: (index) => _onItemTapped(index, context),
             )
           : null,

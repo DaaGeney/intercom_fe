@@ -67,7 +67,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Discord LAN',
+      title: 'VoiceHub',
       theme: AppTheme.lightTheme,
       routerConfig: _router,
       debugShowCheckedModeBanner: false,

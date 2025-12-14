@@ -14,13 +14,13 @@ class UserAvatar extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: size / 2,
-          backgroundColor: Colors.grey.shade200,
+          backgroundColor: AppTheme.primaryPurple.withOpacity(0.3),
           backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
           child: user.avatarUrl == null
               ? Text(
-                  user.username.substring(0, 1).toUpperCase(),
+                  user.username.isNotEmpty ? user.username.substring(0, 1).toUpperCase() : '?',
                   style: TextStyle(
-                    color: AppTheme.primaryBlue,
+                    color: AppTheme.primaryPurple,
                     fontWeight: FontWeight.bold,
                     fontSize: size * 0.4,
                   ),
